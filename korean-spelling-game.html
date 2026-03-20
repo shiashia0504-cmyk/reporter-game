@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맞춤법 마법사 🧙</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #87CEEB;
+    --grass: #5DBB63;
+    --sun: #FFD700;
+    --cloud: #FFFDE7;
+    --pink: #FF8FAB;
+    --purple: #C77DFF;
+    --orange: #FF9A3C;
+    --mint: #4ECDC4;
+    --bg: #E8F4FD;
+    --card: #FFFFFF;
+    --text: #2C3E50;
+    --shadow: rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Gaegu', cursive;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== FLOATING BACKGROUND ===== */
+  .bg-deco {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .cloud {
+    position: absolute;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.6;
+    animation: floatCloud linear infinite;
+  }
+  .cloud::before, .cloud::after {
+    content: ''; position: absolute;
+    background: white; border-radius: 50%;
+  }
+  .cloud-1 { width:120px; height:40px; top:8%; animation-duration:28s; animation-delay:-5s; }
+  .cloud-1::before { width:60px; height:60px; top:-30px; left:15px; }
+  .cloud-1::after { width:40px; height:40px; top:-18px; left:55px; }
+  .cloud-2 { width:90px; height:30px; top:18%; animation-duration:35s; animation-delay:-12s; }
+  .cloud-2::before { width:45px; height:45px; top:-22px; left:10px; }
+  .cloud-2::after { width:30px; height:30px; top:-14px; left:40px; }
+  .cloud-3 { width:150px; height:50px; top:5%; animation-duration:45s; animation-delay:-20s; }
+  .cloud-3::before { width:70px; height:70px; top:-35px; left:20px; }
+  .cloud-3::after { width:50px; height:50px; top:-22px; left:70px; }
+  @keyframes floatCloud {
+    from { left: -200px; }
+    to { left: calc(100% + 200px); }
+  }
+  .star-deco {
+    position: absolute;
+    font-size: 20px;
+    animation: twinkle 2s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    from { opacity: 0.3; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* ===== SETUP SCREEN ===== */
+  #setup-screen {
+    max-width: 700px; margin: 0 auto; padding: 30px 20px;
+    animation: fadeInDown 0.6s ease;
+  }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .main-title {
+    text-align: center;
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--text);
+    text-shadow: 3px 3px 0 var(--sun), 5px 5px 0 rgba(255,215,0,0.3);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .main-subtitle {
+    text-align: center;
+    font-size: 22px;
+    color: #7f8c8d;
+    margin-bottom: 30px;
+  }
+  .wizard-emoji {
+    text-align: center;
+    font-size: 80px;
+    margin-bottom: 10px;
+    animation: bounce 1.5s ease-in-out infinite;
+    display: block;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  .setup-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 8px 32px var(--shadow);
+    margin-bottom: 20px;
+    border: 3px solid #E8E8E8;
+    transition: border-color 0.3s;
+  }
+  .setup-card:focus-within { border-color: var(--purple); }
+  .setup-label {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    font-family: 'Gaegu', cursive;
+    font-size: 20px;
+    line-height: 1.8;
+    border: 2px solid #ddd;
+    border-radius: 16px;
+    padding: 16px;
+    resize: vertical;
+    color: var(--text);
+    transition: border-color 0.3s;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--purple); }
+  textarea::placeholder { color: #bbb; }
+  .char-count { text-align: right; color: #aaa; font-size: 16px; margin-top: 6px; }
+
+  .difficulty-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .diff-btn {
+    flex: 1; min-width: 120px;
+    padding: 14px 10px;
+    border: 3px solid #ddd;
+    border-radius: 16px;
+    background: white;
+    font-family: 'Gaegu', cursive;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .diff-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 16px var(--shadow); }
+  .diff-btn.selected { border-color: var(--purple); background: #F3E8FF; color: var(--purple); }
+
+  .start-btn {
+    width: 100%;
+    padding: 22px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-family: 'Gaegu', cursive;
+    font-size: 30px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(199,125,255,0.4);
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+  .start-btn:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(199,125,255,0.5); }
+  .start-btn:active { transform: translateY(0); }
+  .start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ===== LOADING SCREEN ===== */
+  #loading-screen {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh;
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  .loading-wizard { font-size: 100px; animation: spin 2s linear infinite; }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .loading-text { font-size: 30px; color: var(--purple); margin-top: 20px; font-weight: 700; }
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4) infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+  }
+  .loading-progress {
+    width: 280px; height: 16px;
+    background: #E8E8E8; border-radius: 20px;
+    margin-top: 20px; overflow: hidden;
+  }
+  .loading-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple), var(--pink));
+    border-radius: 20px;
+    width: 0;
+    transition: width 0.5s ease;
+  }
+
+  /* ===== GAME SCREEN ===== */
+  #game-screen { padding: 0; min-height: 100vh; }
+
+  .game-header {
+    background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 100%);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    box-shadow: 0 4px 20px rgba(199,125,255,0.3);
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .back-btn {
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-family: 'Gaegu', cursive;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.4); }
+  .game-title-header { font-size: 26px; font-weight: 700; color: white; }
+  .stage-badge {
+    background: rgba(255,255,255,0.25);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: 700;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .score-display {
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hearts-display { display: flex; gap: 4px; }
+  .heart { font-size: 26px; transition: all 0.3s; }
+  .heart.lost { filter: grayscale(1); opacity: 0.4; transform: scale(0.8); }
+
+  /* ===== CHARACTER ===== */
+  .character-area {
+    background: linear-gradient(180deg, #c8f0c8 0%, #a8e6a8 100%);
+    padding: 20px 24px 0;
+    display: flex; align-items: flex-end; gap: 20px;
+    min-height: 140px;
+    position: relative;
+    overflow: hidden;
+  }
+  .character-area::before {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 30px;
+    background: #5DBB63; border-radius: 50% 50% 0 0 / 20px 20px 0 0;
+  }
+  .char-container { position: relative; z-index: 2; }
+  .char-sprite {
+    font-size: 70px;
+    display: block;
+    animation: charBob 2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  }
+  @keyframes charBob {
+    0%,100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-10px) rotate(3deg); }
+  }
+  .char-level-badge {
+    position: absolute; top: -5px; right: -10px;
+    background: var(--sun);
+    border: 3px solid white;
+    color: #333;
+    font-size: 14px;
+    font-weight: 700;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .xp-bar-container { flex: 1; max-width: 220px; }
+  .xp-label { color: #2d5a27; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .xp-bar-bg { background: rgba(255,255,255,0.5); border-radius: 10px; height: 18px; overflow: hidden; border: 2px solid rgba(255,255,255,0.8); }
+  .xp-bar { height: 100%; background: linear-gradient(90deg, var(--sun), #FF9A3C); border-radius: 8px; transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  /* ===== STAGE MAP ===== */
+  .stage-map {
+    padding: 20px 24px 0;
+    display: flex; gap: 10px; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .stage-map::-webkit-scrollbar { display: none; }
+  .stage-dot {
+    min-width: 56px; height: 56px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700;
+    border: 3px solid #ddd;
+    background: white;
+    color: #bbb;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .stage-dot.completed { background: var(--grass); border-color: var(--grass); color: white; }
+  .stage-dot.current { background: var(--purple); border-color: var(--purple); color: white; box-shadow: 0 0 0 4px rgba(199,125,255,0.3); animation: stagePulse 1.5s ease-in-out infinite; }
+  .stage-dot.locked { background: #f5f5f5; }
+  @keyframes stagePulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(199,125,255,0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(199,125,255,0.1); }
+  }
+  .stage-connector {
+    height: 3px; background: #ddd; flex: 1; align-self: center; min-width: 20px;
+    border-radius: 2px;
+  }
+  .stage-connector.done { background: var(--grass); }
+
+  /* ===== GAME CONTENT ===== */
+  .game-content {
+    max-width: 720px; margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+  .game-type-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 12px rgba(199,125,255,0.3);
+  }
+  .question-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 8px 32px var(--shadow);
+    border: 3px solid #F0F0F0;
+    margin-bottom: 20px;
+    animation: slideUp 0.4s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .question-instruction {
+    font-size: 20px; color: #666; margin-bottom: 16px;
+    padding-bottom: 14px; border-bottom: 2px dashed #eee;
+  }
+
+  /* === GAME TYPE 1: 틀린 곳 찾기 === */
+  .find-error-text {
+    font-size: 26px;
+    line-height: 2.2;
+    color: var(--text);
+  }
+  .word-span {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+    margin: 2px;
+  }
+  .word-span:hover { background: #FFF3CD; border-color: var(--orange); transform: scale(1.08); }
+  .word-span.selected-wrong { background: #FFE0E0; border-color: #FF6B6B; animation: shake 0.4s ease; }
+  .word-span.selected-right { background: #E0FFE0; border-color: var(--grass); }
+  .word-span.error-word { background: #FFB3C1; border-color: var(--pink); }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* === GAME TYPE 2: 단어 순서 맞추기 === */
+  .word-bank {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    min-height: 60px;
+    padding: 16px;
+    background: #F8F0FF;
+    border-radius: 16px;
+    border: 2px dashed var(--purple);
+    margin-bottom: 16px;
+  }
+  .word-tile {
+    padding: 10px 18px;
+    background: white;
+    border: 2px solid var(--purple);
+    border-radius: 14px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    box-shadow: 0 3px 8px rgba(199,125,255,0.2);
+  }
+  .word-tile:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 6px 16px rgba(199,125,255,0.3); }
+  .word-tile.placed { opacity: 0.3; cursor: default; pointer-events: none; }
+  .answer-slots {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    min-height: 60px;
+    padding: 16px;
+    background: #F0FFF0;
+    border-radius: 16px;
+    border: 2px dashed var(--grass);
+  }
+  .answer-slot {
+    padding: 10px 18px;
+    background: white;
+    border: 2px solid var(--grass);
+    border-radius: 14px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 8px rgba(93,187,99,0.2);
+  }
+  .answer-slot:hover { background: #FFE0E0; border-color: #FF6B6B; }
+
+  /* === GAME TYPE 3: 드래그 띄어쓰기 === */
+  .spacing-text-container {
+    font-size: 28px;
+    line-height: 2.5;
+    color: var(--text);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  }
+  .char-block {
+    display: inline-block;
+    padding: 4px 6px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .space-btn {
+    width: 32px; height: 36px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+    color: #ccc;
+    vertical-align: middle;
+  }
+  .space-btn:hover { background: #FFF3CD; border-color: var(--orange); color: var(--orange); transform: scale(1.1); }
+  .space-btn.has-space { background: var(--mint); border-color: var(--mint); color: white; border-style: solid; }
+  .space-btn.correct { background: var(--grass); border-color: var(--grass); color: white; }
+  .space-btn.incorrect { background: #FF6B6B; border-color: #FF6B6B; color: white; animation: shake 0.4s ease; }
+
+  /* === GAME TYPE 4: 빈칸 채우기 === */
+  .fill-blank-text {
+    font-size: 26px;
+    line-height: 2.4;
+    color: var(--text);
+  }
+  .blank-input {
+    display: inline-block;
+    min-width: 100px;
+    border: none;
+    border-bottom: 3px solid var(--purple);
+    font-family: 'Gaegu', cursive;
+    font-size: 24px;
+    color: var(--purple);
+    text-align: center;
+    padding: 2px 8px;
+    background: transparent;
+    outline: none;
+    transition: border-color 0.3s;
+    vertical-align: bottom;
+  }
+  .blank-input:focus { border-bottom-color: var(--pink); border-bottom-width: 4px; }
+  .blank-input.correct { border-color: var(--grass); color: var(--grass); }
+  .blank-input.incorrect { border-color: #FF6B6B; color: #FF6B6B; animation: shake 0.4s ease; }
+
+  /* ===== CHOICES ===== */
+  .choices-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-top: 16px;
+  }
+  .choice-btn {
+    padding: 16px;
+    background: white;
+    border: 3px solid #E8E8E8;
+    border-radius: 18px;
+    font-family: 'Gaegu', cursive;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .choice-btn:hover { border-color: var(--purple); background: #F3E8FF; transform: translateY(-3px); }
+  .choice-btn.correct-ans { border-color: var(--grass); background: #E8FFE8; color: #2d7a2d; }
+  .choice-btn.wrong-ans { border-color: #FF6B6B; background: #FFE8E8; color: #c0392b; }
+
+  /* ===== ACTION BUTTONS ===== */
+  .action-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .check-btn {
+    flex: 1;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: white;
+    border: none;
+    border-radius: 18px;
+    font-family: 'Gaegu', cursive;
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(199,125,255,0.4);
+    transition: all 0.2s;
+  }
+  .check-btn:hover { transform: translateY(-3px); }
+  .check-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .hint-btn {
+    padding: 18px 24px;
+    background: white;
+    border: 3px solid var(--orange);
+    border-radius: 18px;
+    font-family: 'Gaegu', cursive;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--orange);
+    transition: all 0.2s;
+  }
+  .hint-btn:hover { background: #FFF3E0; transform: translateY(-3px); }
+
+  /* ===== FEEDBACK ===== */
+  .feedback-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+  }
+  .feedback-card {
+    background: white;
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .feedback-emoji { font-size: 80px; margin-bottom: 16px; animation: bounce 0.5s ease; }
+  .feedback-title { font-size: 36px; font-weight: 700; margin-bottom: 10px; }
+  .feedback-title.ok { color: var(--grass); }
+  .feedback-title.no { color: #FF6B6B; }
+  .feedback-desc { font-size: 20px; color: #666; margin-bottom: 24px; line-height: 1.6; }
+  .feedback-xp { font-size: 22px; color: var(--purple); font-weight: 700; margin-bottom: 20px; }
+  .next-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: white;
+    border: none;
+    border-radius: 18px;
+    font-family: 'Gaegu', cursive;
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .next-btn:hover { transform: scale(1.03); }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+    z-index: 200;
+    pointer-events: none;
+  }
+  @keyframes confettiFall {
+    from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ===== COMPLETE SCREEN ===== */
+  #complete-screen {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; padding: 40px 20px;
+    text-align: center;
+  }
+  .complete-emoji { font-size: 100px; animation: bounce 1s ease-in-out infinite; }
+  .complete-title { font-size: 48px; font-weight: 700; color: var(--purple); margin: 20px 0 10px; text-shadow: 3px 3px 0 rgba(199,125,255,0.2); }
+  .complete-stars { font-size: 50px; margin: 10px 0 20px; }
+  .complete-stats {
+    background: white; border-radius: 24px; padding: 24px 32px;
+    box-shadow: 0 8px 32px var(--shadow); margin-bottom: 24px;
+    min-width: 280px;
+  }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 22px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val { font-weight: 700; color: var(--purple); }
+  .replay-btn {
+    padding: 20px 50px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: white; border: none; border-radius: 24px;
+    font-family: 'Gaegu', cursive; font-size: 28px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 8px 24px rgba(199,125,255,0.4);
+    transition: all 0.2s;
+  }
+  .replay-btn:hover { transform: translateY(-4px); }
+
+  /* Hint tooltip */
+  .hint-box {
+    background: #FFF9E6;
+    border: 2px solid var(--orange);
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 19px;
+    color: #7A5000;
+    margin-top: 14px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .hint-box.visible { display: block; }
+
+  /* Stars rating */
+  .stars-row {
+    display: flex; gap: 6px; justify-content: center; margin: 10px 0;
+  }
+  .star-icon { font-size: 32px; transition: all 0.3s; }
+  .star-icon.lit { animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes starPop {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  .progress-bar-outer {
+    background: #eee; border-radius: 20px; height: 14px;
+    overflow: hidden; margin-top: 8px;
+  }
+  .progress-bar-inner {
+    height: 100%; background: linear-gradient(90deg, var(--purple), var(--pink));
+    border-radius: 20px; transition: width 0.5s ease;
+  }
+  .q-progress { font-size: 16px; color: #888; margin-top: 4px; text-align: right; }
+
+  @media (max-width: 500px) {
+    .main-title { font-size: 36px; }
+    .wizard-emoji { font-size: 60px; }
+    .find-error-text, .spacing-text-container, .fill-blank-text { font-size: 22px; }
+    .choices-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-deco">
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+  <div class="cloud cloud-3"></div>
+  <span class="star-deco" style="top:10%; left:5%; animation-delay:0s">⭐</span>
+  <span class="star-deco" style="top:20%; right:8%; animation-delay:0.5s">✨</span>
+  <span class="star-deco" style="top:70%; left:3%; animation-delay:1s">🌟</span>
+  <span class="star-deco" style="bottom:15%; right:5%; animation-delay:0.3s">⭐</span>
+  <span class="star-deco" style="top:45%; right:3%; animation-delay:0.7s">✨</span>
+</div>
+
+<!-- STUDENT SCREEN (기본 화면) -->
+<div id="setup-screen" class="screen active">
+  <span class="wizard-emoji">🧙‍♂️</span>
+  <div class="main-title">맞춤법 마법사</div>
+  <div class="main-subtitle">✨ 책 속 마법으로 공부해요! ✨</div>
+
+  <div id="ready-state">
+    <!-- 책 준비됨 상태 -->
+    <div id="book-ready-card" class="setup-card" style="display:none; text-align:center">
+      <div style="font-size:50px; margin-bottom:10px">📚</div>
+      <div style="font-size:24px; font-weight:700; color:var(--purple); margin-bottom:6px" id="book-title-display">오늘의 책</div>
+      <div style="font-size:18px; color:#888" id="book-preview-display"></div>
+    </div>
+
+    <!-- 책 없음 상태 -->
+    <div id="no-book-card" class="setup-card" style="text-align:center">
+      <div style="font-size:50px; margin-bottom:12px">📭</div>
+      <div style="font-size:22px; color:#aaa; line-height:1.8">아직 선생님이<br>책을 준비하지 않으셨어요!<br><span style="font-size:18px">선생님께 부탁해 보세요 🙏</span></div>
+    </div>
+
+    <div class="setup-card" id="diff-card" style="display:none">
+      <div class="setup-label">⚡ 난이도 선택</div>
+      <div class="difficulty-row">
+        <button class="diff-btn selected" onclick="selectDiff(this,'easy')">🌱 쉬움<br><small style="font-size:14px">1학년</small></button>
+        <button class="diff-btn" onclick="selectDiff(this,'normal')">🌳 보통<br><small style="font-size:14px">2학년</small></button>
+        <button class="diff-btn" onclick="selectDiff(this,'hard')">🔥 어려움<br><small style="font-size:14px">심화</small></button>
+      </div>
+    </div>
+
+    <button class="start-btn" id="start-btn" onclick="startGame()" disabled>
+      🎮 게임 시작하기!
+    </button>
+  </div>
+
+  <!-- 선생님 버튼 (화면 오른쪽 하단, 눈에 안 띄게) -->
+  <div style="text-align:center; margin-top:30px">
+    <button onclick="showTeacherLogin()" style="background:none; border:none; color:#ccc; font-size:14px; cursor:pointer; font-family:'Gaegu',cursive; padding:8px 16px; border-radius:20px; transition:all 0.2s" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#ccc'">
+      ⚙️ 선생님
+    </button>
+  </div>
+</div>
+
+<!-- TEACHER LOGIN SCREEN -->
+<div id="teacher-login-screen" class="screen">
+  <div style="max-width:420px; margin:0 auto; padding:40px 20px; animation:fadeInDown 0.4s ease">
+    <div style="text-align:center; margin-bottom:30px">
+      <div style="font-size:70px; margin-bottom:10px">🔐</div>
+      <div style="font-size:32px; font-weight:700; color:var(--text)">선생님 전용</div>
+      <div style="font-size:18px; color:#aaa; margin-top:6px">비밀번호를 입력하세요</div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-label">🔑 비밀번호</div>
+      <div style="display:flex; gap:12px; align-items:center">
+        <input type="password" id="teacher-pw" placeholder="비밀번호 입력"
+          style="flex:1; padding:14px 18px; border:2px solid #ddd; border-radius:14px; font-family:'Gaegu',cursive; font-size:22px; outline:none; transition:border-color 0.3s"
+          onfocus="this.style.borderColor='var(--purple)'"
+          onblur="this.style.borderColor='#ddd'"
+          onkeydown="if(event.key==='Enter') checkTeacherPW()"
+        >
+        <button onclick="checkTeacherPW()" style="padding:14px 20px; background:var(--purple); color:white; border:none; border-radius:14px; font-family:'Gaegu',cursive; font-size:20px; cursor:pointer; transition:all 0.2s; white-space:nowrap" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform=''">확인</button>
+      </div>
+      <div id="pw-error" style="color:#FF6B6B; font-size:17px; margin-top:10px; display:none">❌ 비밀번호가 틀렸어요!</div>
+    </div>
+
+    <button onclick="showScreen('setup-screen')" style="width:100%; padding:16px; background:white; border:3px solid #ddd; border-radius:18px; font-family:'Gaegu',cursive; font-size:20px; cursor:pointer; color:#888; margin-top:10px; transition:all 0.2s" onmouseover="this.style.borderColor='#bbb'" onmouseout="this.style.borderColor='#ddd'">
+      ← 돌아가기
+    </button>
+  </div>
+</div>
+
+<!-- TEACHER PANEL SCREEN -->
+<div id="teacher-panel-screen" class="screen">
+  <div style="max-width:680px; margin:0 auto; padding:30px 20px; animation:fadeInDown 0.4s ease">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px">
+      <div>
+        <div style="font-size:36px; font-weight:700; color:var(--text)">👩‍🏫 선생님 패널</div>
+        <div style="font-size:18px; color:#aaa">학생들이 볼 수 없는 공간이에요</div>
+      </div>
+      <button onclick="teacherLogout()" style="padding:10px 20px; background:white; border:2px solid #ddd; border-radius:12px; font-family:'Gaegu',cursive; font-size:18px; cursor:pointer; color:#888">로그아웃</button>
+    </div>
+
+    <!-- 현재 책 상태 -->
+    <div class="setup-card" id="current-book-status">
+      <div class="setup-label">📚 현재 등록된 책</div>
+      <div id="current-book-info" style="font-size:18px; color:#888; padding:12px 0">등록된 책이 없어요.</div>
+    </div>
+
+    <!-- 새 책 입력 -->
+    <div class="setup-card">
+      <div class="setup-label">📖 새 책 내용 등록하기</div>
+      <input type="text" id="book-name-input" placeholder="책 제목 (예: 토끼와 거북이)"
+        style="width:100%; padding:12px 16px; border:2px solid #ddd; border-radius:12px; font-family:'Gaegu',cursive; font-size:20px; outline:none; margin-bottom:12px; transition:border-color 0.3s"
+        onfocus="this.style.borderColor='var(--purple)'"
+        onblur="this.style.borderColor='#ddd'"
+      >
+      <textarea id="book-text" placeholder="여기에 책의 내용을 입력하세요.&#10;예) 토끼와 거북이가 달리기 시합을 했어요. 토끼는 빠르게 달렸지만 중간에 낮잠을 잤어요. 거북이는 쉬지 않고 열심히 달렸어요." oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="char-count">0</span>자 입력됨 (최소 20자)</div>
+    </div>
+
+    <button class="start-btn" id="save-book-btn" onclick="saveBook()" disabled style="margin-bottom:12px">
+      💾 저장하고 학생 화면 열기
+    </button>
+    <button onclick="clearBook()" style="width:100%; padding:16px; background:white; border:3px solid #FFB3B3; border-radius:18px; font-family:'Gaegu',cursive; font-size:20px; cursor:pointer; color:#FF6B6B; transition:all 0.2s" onmouseover="this.style.background='#FFF0F0'" onmouseout="this.style.background='white'">
+      🗑️ 등록된 책 삭제하기
+    </button>
+  </div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen" class="screen">
+  <div class="loading-wizard">🪄</div>
+  <div class="loading-text">문제 마법 중<span class="loading-dots"></span></div>
+  <div style="font-size:20px; color:#aaa; margin-top:8px" id="loading-step">AI가 문제를 만들고 있어요</div>
+  <div class="loading-progress"><div class="loading-bar" id="loading-bar"></div></div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="game-header">
+    <div class="header-left">
+      <button class="back-btn" onclick="goBack()">← 처음으로</button>
+      <div class="game-title-header">맞춤법 마법사</div>
+    </div>
+    <div class="stage-badge" id="stage-badge">스테이지 1</div>
+    <div class="header-right">
+      <div class="score-display">⭐ <span id="score-display">0</span></div>
+      <div class="hearts-display" id="hearts-display"></div>
+    </div>
+  </div>
+
+  <div class="character-area">
+    <div class="char-container">
+      <span class="char-sprite" id="char-sprite">🐣</span>
+      <div class="char-level-badge" id="char-level">1</div>
+    </div>
+    <div class="xp-bar-container">
+      <div class="xp-label" id="xp-label">경험치: 0 / 100</div>
+      <div class="xp-bar-bg"><div class="xp-bar" id="xp-bar" style="width:0%"></div></div>
+    </div>
+    <div style="font-size:30px; position:relative; z-index:2; margin-left:auto">🌸🌼🍄</div>
+  </div>
+
+  <div class="stage-map" id="stage-map"></div>
+
+  <div class="game-content" id="game-content"></div>
+</div>
+
+<!-- COMPLETE SCREEN -->
+<div id="complete-screen" class="screen">
+  <div class="complete-emoji" id="complete-emoji">🏆</div>
+  <div class="complete-title">게임 완료!</div>
+  <div class="complete-stars" id="complete-stars">⭐⭐⭐</div>
+  <div class="complete-stats" id="complete-stats"></div>
+  <button class="replay-btn" onclick="goBack()">🔄 다시 하기</button>
+</div>
+
+<script>
+// ===========================
+// STATE
+// ===========================
+let gameData = null;
+let currentQ = 0;
+let score = 0;
+let hearts = 3;
+let xp = 0;
+let charLevel = 1;
+let stagesCleared = 0;
+let hintUsed = false;
+let totalCorrect = 0;
+let difficulty = 'easy';
+let bookText = '';
+let answerSlots = [];
+let wordBankUsed = [];
+
+const CHARS = ['🐣','🐥','🐓','🦅','🐉','🦄','🌟'];
+const CHAR_NAMES = ['아기병아리','노란병아리','든든한닭','멋진독수리','용감한용','마법유니콘','빛나는별'];
+const XP_PER_LEVEL = 100;
+
+// ===========================
+// FIREBASE CONFIG
+// ── 아래 7줄을 선생님의 Firebase 프로젝트 설정으로 교체하세요 ──
+// ===========================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAiYcZ-14S4qhNwjD6lG0GSXEMJO8gdKgI",
+  authDomain:        "spelling-game-1a3df.firebaseapp.com",
+  databaseURL:       "https://spelling-game-1a3df-default-rtdb.firebaseio.com",
+  projectId:         "spelling-game-1a3df",
+  storageBucket:     "spelling-game-1a3df.firebasestorage.app",
+  messagingSenderId: "789558414141",
+  appId:             "1:789558414141:web:c0aeb59aa03ef1fe0f1354",
+  measurementId:     "G-7W1HLC5K16"
+};
+
+// Firebase SDK (CDN)
+let db = null;
+let bookRef = null;
+let studentUnsubscribe = null;
+
+async function initFirebase() {
+  if (db) return true;
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getDatabase, ref, set, onValue, remove } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getDatabase(app);
+    bookRef = ref(db, 'currentBook');
+
+    window._fbSet    = (data) => set(bookRef, data);
+    window._fbRemove = ()     => remove(bookRef);
+    window._fbListen = (cb)   => onValue(bookRef, snap => cb(snap.val()));
+    return true;
+  } catch(e) {
+    console.error('Firebase 초기화 실패:', e);
+    return false;
+  }
+}
+
+// ===========================
+// TEACHER / STUDENT MODE
+// ===========================
+const TEACHER_PW = 'teacher1234'; // ← 비밀번호 변경 가능
+
+function showTeacherLogin() {
+  document.getElementById('teacher-pw').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+  showScreen('teacher-login-screen');
+  setTimeout(() => document.getElementById('teacher-pw').focus(), 200);
+}
+
+function checkTeacherPW() {
+  const pw = document.getElementById('teacher-pw').value;
+  if (pw === TEACHER_PW) {
+    document.getElementById('pw-error').style.display = 'none';
+    showTeacherPanel();
+  } else {
+    const err = document.getElementById('pw-error');
+    err.style.display = 'block';
+    document.getElementById('teacher-pw').value = '';
+    document.getElementById('teacher-pw').focus();
+  }
+}
+
+async function showTeacherPanel() {
+  showScreen('teacher-panel-screen');
+  const ok = await initFirebase();
+  if (!ok) {
+    showFirebaseSetupGuide();
+    return;
+  }
+  // Firebase에서 현재 책 불러오기
+  window._fbListen(data => {
+    updateCurrentBookStatus(data);
+    if (data) {
+      document.getElementById('book-name-input').value = data.title || '';
+      document.getElementById('book-text').value = data.text || '';
+      updateCharCount();
+    }
+  });
+}
+
+function updateCurrentBookStatus(data) {
+  const info = document.getElementById('current-book-info');
+  if (data && data.text) {
+    info.innerHTML = `
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <span style="font-size:30px">📗</span>
+        <div>
+          <div style="font-size:20px; font-weight:700; color:var(--text)">${data.title || '제목 없음'}</div>
+          <div style="font-size:16px; color:#aaa; margin-top:2px">${data.text.length}자 · ${data.text.slice(0,40)}...</div>
+        </div>
+        <span style="margin-left:auto; background:#E8FFE8; color:var(--grass); padding:6px 14px; border-radius:20px; font-size:16px; font-weight:700">✅ 등록됨</span>
+      </div>`;
+  } else {
+    info.innerHTML = '<div style="color:#aaa; font-size:18px; padding:8px 0">📭 등록된 책이 없어요.</div>';
+  }
+}
+
+async function saveBook() {
+  const text = document.getElementById('book-text').value.trim();
+  const title = document.getElementById('book-name-input').value.trim() || '오늘의 책';
+  if (text.length < 20) return;
+
+  const btn = document.getElementById('save-book-btn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+
+  try {
+    await window._fbSet({ title, text, updatedAt: Date.now() });
+    btn.textContent = '✅ 저장 완료!';
+    setTimeout(() => { btn.textContent = '💾 저장하고 학생 화면 열기'; btn.disabled = false; }, 1500);
+    showScreen('setup-screen');
+  } catch(e) {
+    alert('저장 실패: ' + e.message);
+    btn.textContent = '💾 저장하고 학생 화면 열기'; btn.disabled = false;
+  }
+}
+
+async function clearBook() {
+  if (!confirm('등록된 책을 삭제할까요?')) return;
+  try {
+    await window._fbRemove();
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+}
+
+function teacherLogout() {
+  showScreen('setup-screen');
+}
+
+// ── 학생 화면: Firebase 실시간 감지 ──
+async function startStudentListener() {
+  const ok = await initFirebase();
+  if (!ok) return;
+
+  window._fbListen(data => {
+    applyBookToStudentScreen(data);
+  });
+}
+
+function applyBookToStudentScreen(data) {
+  const readyCard = document.getElementById('book-ready-card');
+  const noBookCard = document.getElementById('no-book-card');
+  const diffCard = document.getElementById('diff-card');
+  const startBtn = document.getElementById('start-btn');
+
+  if (data && data.text) {
+    readyCard.style.display = 'block';
+    noBookCard.style.display = 'none';
+    diffCard.style.display = 'block';
+    startBtn.disabled = false;
+    document.getElementById('book-title-display').textContent = '📚 ' + (data.title || '오늘의 책');
+    document.getElementById('book-preview-display').textContent = data.text.slice(0,50) + (data.text.length > 50 ? '...' : '');
+    window._currentBookData = data;
+  } else {
+    readyCard.style.display = 'none';
+    noBookCard.style.display = 'block';
+    diffCard.style.display = 'none';
+    startBtn.disabled = true;
+    window._currentBookData = null;
+  }
+}
+
+// Firebase 미설정 안내
+function showFirebaseSetupGuide() {
+  document.getElementById('current-book-info').innerHTML = `
+    <div style="background:#FFF3E0; border:2px solid var(--orange); border-radius:14px; padding:18px; font-size:17px; line-height:1.9; color:#7A4000">
+      <b>⚠️ Firebase 설정이 필요해요!</b><br>
+      1. <a href="https://console.firebase.google.com" target="_blank" style="color:var(--orange)">console.firebase.google.com</a> 접속<br>
+      2. 새 프로젝트 만들기<br>
+      3. <b>Realtime Database</b> 생성 (테스트 모드)<br>
+      4. 프로젝트 설정 → 앱 추가(웹) → 설정값 복사<br>
+      5. 파일 상단 <b>FIREBASE_CONFIG</b> 부분에 붙여넣기
+    </div>`;
+}
+
+// 페이지 로드 시
+window.addEventListener('DOMContentLoaded', () => startStudentListener());
+
+// ===========================
+// SETUP
+// ===========================
+function updateCharCount() {
+  const t = document.getElementById('book-text').value;
+  document.getElementById('char-count').textContent = t.length;
+  document.getElementById('save-book-btn').disabled = t.trim().length < 20;
+}
+
+function selectDiff(el, val) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  difficulty = val;
+}
+
+// ===========================
+// GAME START
+// ===========================
+async function startGame() {
+  const data = window._currentBookData;
+  bookText = data ? data.text : '';
+  if (bookText.length < 20) return;
+
+  showScreen('loading-screen');
+  animateLoading();
+
+  try {
+    const questions = await generateQuestions(bookText, difficulty);
+    gameData = questions;
+    initGame();
+    showScreen('game-screen');
+  } catch(e) {
+    console.error(e);
+    alert('문제를 만드는 중 오류가 발생했어요. 다시 시도해 주세요.\n' + e.message);
+    showScreen('setup-screen');
+  }
+}
+
+function animateLoading() {
+  const bar = document.getElementById('loading-bar');
+  const step = document.getElementById('loading-step');
+  const steps = ['책 내용 읽는 중...','맞춤법 오류 만드는 중...','문장 분석하는 중...','문제 완성하는 중!'];
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < steps.length) {
+      step.textContent = steps[i];
+      bar.style.width = ((i+1)/steps.length * 80) + '%';
+      i++;
+    }
+  }, 900);
+  setTimeout(() => { clearInterval(iv); bar.style.width = '100%'; }, 3800);
+}
+
+// ===========================
+// AI QUESTION GENERATION
+// ===========================
+async function generateQuestions(text, diff) {
+  const diffDesc = diff === 'easy' ? '1학년(매우 쉬운)' : diff === 'normal' ? '2학년(보통)' : '심화(어려운)';
+  
+  const prompt = `당신은 초등학교 ${diffDesc} 맞춤법/띄어쓰기 문제를 만드는 전문가입니다.
+
+다음 책 내용을 바탕으로 문제를 만들어주세요:
+"""
+${text.slice(0, 800)}
+"""
+
+아래 JSON 형식으로 정확히 8개의 문제를 만들어주세요. 각 문제는 서로 다른 유형이어야 하며, 모두 원문 내용과 관련 있어야 합니다.
+
+유형 4가지를 2개씩 균등하게 분배:
+1. "find_error" - 틀린 맞춤법 찾기
+2. "word_order" - 단어 순서 맞추기  
+3. "spacing" - 띄어쓰기 고치기
+4. "fill_blank" - 빈칸 채우기
+
+JSON만 반환하고 다른 텍스트 없이:
+{
+  "questions": [
+    {
+      "type": "find_error",
+      "instruction": "틀린 낱말을 찾아 클릭하세요!",
+      "sentence": "전체 문장 (원문 기반, 10-20자)",
+      "errorWord": "틀린단어",
+      "correctWord": "바른단어",
+      "explanation": "바른 표현: '바른단어' - 간단한 이유",
+      "hint": "힌트 텍스트"
+    },
+    {
+      "type": "word_order",
+      "instruction": "낱말을 순서대로 클릭해서 문장을 만들어요!",
+      "words": ["단어1", "단어2", "단어3", "단어4", "단어5"],
+      "answer": ["올바른", "순서로", "나열된", "단어들", "전체"],
+      "explanation": "완성된 문장 설명",
+      "hint": "힌트 텍스트"
+    },
+    {
+      "type": "spacing",
+      "instruction": "붙여진 곳을 찾아 클릭해서 띄어쓰세요!",
+      "joined": "띄어쓰기없이붙여진문장",
+      "answer": "올바르게 띄어쓴 문장",
+      "explanation": "띄어쓰기 설명",
+      "hint": "힌트 텍스트"
+    },
+    {
+      "type": "fill_blank",
+      "instruction": "빈칸에 알맞은 낱말을 써보세요!",
+      "sentence": "문장의 ___에 빈칸 표시",
+      "blank": "___ 앞뒤 맥락으로 정답 유추",
+      "answer": "정답단어",
+      "choices": ["정답단어", "오답1", "오답2", "오답3"],
+      "explanation": "정답 설명",
+      "hint": "힌트 텍스트"
+    }
+  ]
+}
+
+중요: 모든 내용은 원문 텍스트 내용을 기반으로 하고, 초등학생 ${diffDesc} 수준에 맞게 만들어주세요.`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 3000,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (!response.ok) throw new Error('API 오류: ' + response.status);
+  const data = await response.json();
+  const raw = data.content.map(c => c.text || '').join('');
+  
+  // Clean and parse JSON
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('응답 형식 오류');
+  
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!parsed.questions || parsed.questions.length === 0) throw new Error('문제가 없습니다');
+  
+  // Shuffle choices for fill_blank
+  parsed.questions.forEach(q => {
+    if (q.type === 'fill_blank' && q.choices) {
+      q.choices = shuffle(q.choices);
+    }
+  });
+  
+  return parsed.questions;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ===========================
+// GAME INIT
+// ===========================
+function initGame() {
+  currentQ = 0; score = 0; hearts = 3; xp = 0; charLevel = 1;
+  stagesCleared = 0; totalCorrect = 0;
+  updateHUD();
+  buildStageMap();
+  renderQuestion();
+}
+
+function updateHUD() {
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('stage-badge').textContent = `스테이지 ${currentQ + 1}`;
+  document.getElementById('char-level').textContent = charLevel;
+  document.getElementById('char-sprite').textContent = CHARS[Math.min(charLevel-1, CHARS.length-1)];
+  
+  const xpPct = (xp % XP_PER_LEVEL) / XP_PER_LEVEL * 100;
+  document.getElementById('xp-bar').style.width = xpPct + '%';
+  document.getElementById('xp-label').textContent = `${CHAR_NAMES[Math.min(charLevel-1, CHARS.length-1)]} | Lv.${charLevel}`;
+  
+  const hd = document.getElementById('hearts-display');
+  hd.innerHTML = '';
+  for (let i=0; i<3; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart' + (i >= hearts ? ' lost' : '');
+    h.textContent = '❤️';
+    hd.appendChild(h);
+  }
+}
+
+function buildStageMap() {
+  const map = document.getElementById('stage-map');
+  map.innerHTML = '';
+  const total = gameData.length;
+  for (let i=0; i<total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'stage-dot' + (i < stagesCleared ? ' completed' : i === currentQ ? ' current' : ' locked');
+    dot.innerHTML = i < stagesCleared ? '✓' : (i+1);
+    dot.id = `stage-${i}`;
+    map.appendChild(dot);
+    if (i < total-1) {
+      const conn = document.createElement('div');
+      conn.className = 'stage-connector' + (i < stagesCleared ? ' done' : '');
+      map.appendChild(conn);
+    }
+  }
+  // Scroll to current
+  setTimeout(() => {
+    const cur = document.getElementById(`stage-${currentQ}`);
+    if (cur) cur.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  }, 100);
+}
+
+// ===========================
+// RENDER QUESTION
+// ===========================
+function renderQuestion() {
+  if (!gameData || currentQ >= gameData.length) {
+    showComplete();
+    return;
+  }
+  hintUsed = false;
+  answerSlots = [];
+  wordBankUsed = [];
+  
+  const q = gameData[currentQ];
+  const content = document.getElementById('game-content');
+  
+  const typeLabels = {
+    find_error: '🔍 틀린 곳 찾기',
+    word_order: '🔤 순서 맞추기',
+    spacing: '↔️ 띄어쓰기',
+    fill_blank: '✏️ 빈칸 채우기'
+  };
+
+  let gameHTML = `
+    <div class="game-type-label">${typeLabels[q.type] || '문제'}</div>
+    <div style="margin-bottom:8px">
+      <div class="progress-bar-outer"><div class="progress-bar-inner" style="width:${(currentQ/gameData.length)*100}%"></div></div>
+      <div class="q-progress">${currentQ+1} / ${gameData.length}</div>
+    </div>
+    <div class="question-card">
+      <div class="question-instruction">${q.instruction}</div>
+      ${renderGameType(q)}
+      <div class="hint-box" id="hint-box">💡 힌트: ${q.hint || '잘 생각해보세요!'}</div>
+    </div>
+    <div class="action-row">
+      ${q.type !== 'find_error' && q.type !== 'fill_blank' ? `<button class="check-btn" id="check-btn" onclick="checkAnswer()">✅ 확인하기</button>` : ''}
+      <button class="hint-btn" onclick="showHint()">💡 힌트</button>
+    </div>
+  `;
+  content.innerHTML = gameHTML;
+}
+
+function renderGameType(q) {
+  switch(q.type) {
+    case 'find_error': return renderFindError(q);
+    case 'word_order': return renderWordOrder(q);
+    case 'spacing': return renderSpacing(q);
+    case 'fill_blank': return renderFillBlank(q);
+    default: return '<p>알 수 없는 문제 유형</p>';
+  }
+}
+
+// FIND ERROR
+function renderFindError(q) {
+  const words = q.sentence.split(' ');
+  const spans = words.map(w => `<span class="word-span" onclick="clickWord(this,'${w}','${q.errorWord}','${q.correctWord}','${q.explanation}')">${w}</span>`).join(' ');
+  return `<div class="find-error-text">${spans}</div>`;
+}
+
+function clickWord(el, word, errorWord, correctWord, explanation) {
+  if (el.classList.contains('selected-right') || el.classList.contains('error-word')) return;
+  
+  // Normalize comparison
+  const w = word.replace(/[.,!?~]/g,'');
+  const e = errorWord.replace(/[.,!?~]/g,'');
+  
+  if (w === e || word.includes(e)) {
+    el.classList.add('selected-right');
+    el.classList.add('error-word');
+    playSound('correct');
+    showFeedback(true, explanation, 20);
+  } else {
+    el.classList.add('selected-wrong');
+    setTimeout(() => el.classList.remove('selected-wrong'), 500);
+    if (hearts > 1) { hearts--; updateHUD(); playSound('wrong'); }
+    else {
+      hearts = 0; updateHUD();
+      // highlight correct
+      document.querySelectorAll('.word-span').forEach(s => {
+        if (s.textContent.includes(e)) s.classList.add('error-word');
+      });
+      setTimeout(() => showFeedback(false, explanation, 0), 600);
+    }
+  }
+}
+
+// WORD ORDER
+function renderWordOrder(q) {
+  const shuffled = shuffle([...q.words]);
+  const bankItems = shuffled.map((w,i) =>
+    `<div class="word-tile" id="tile-${i}" onclick="pickWord(this,${i},'${w}')">${w}</div>`
+  ).join('');
+  
+  return `
+    <div style="margin-bottom:12px; font-size:18px; color:#888">단어 은행에서 클릭해서 문장을 만들어요</div>
+    <div class="word-bank" id="word-bank">${bankItems}</div>
+    <div style="font-size:18px; color:#888; margin-bottom:8px">↓ 여기에 순서대로</div>
+    <div class="answer-slots" id="answer-slots"></div>
+  `;
+}
+
+function pickWord(el, idx, word) {
+  if (el.classList.contains('placed')) return;
+  el.classList.add('placed');
+  answerSlots.push({idx, word});
+  wordBankUsed.push(idx);
+  
+  const slots = document.getElementById('answer-slots');
+  const tile = document.createElement('div');
+  tile.className = 'answer-slot';
+  tile.textContent = word;
+  tile.dataset.idx = idx;
+  tile.onclick = () => removeFromSlot(tile, idx);
+  slots.appendChild(tile);
+}
+
+function removeFromSlot(tile, idx) {
+  answerSlots = answerSlots.filter(s => s.idx !== idx);
+  document.getElementById(`tile-${idx}`)?.classList.remove('placed');
+  tile.remove();
+}
+
+// SPACING
+function renderSpacing(q) {
+  const answer = q.answer;
+  const joined = q.joined;
+  
+  // Build character blocks with space buttons between them
+  let html = '<div class="spacing-text-container" id="spacing-container">';
+  let charIdx = 0;
+  
+  for (let i = 0; i < joined.length; i++) {
+    html += `<span class="char-block">${joined[i]}</span>`;
+    if (i < joined.length - 1) {
+      html += `<button class="space-btn" data-pos="${i}" onclick="toggleSpace(this,${i})" title="여기 띄어쓰기">·</button>`;
+    }
+  }
+  html += '</div>';
+  
+  // Store answer positions
+  window._spacingAnswer = answer;
+  window._spacingJoined = joined;
+  
+  return html;
+}
+
+function toggleSpace(btn, pos) {
+  if (btn.classList.contains('has-space')) {
+    btn.classList.remove('has-space');
+    btn.textContent = '·';
+  } else {
+    btn.classList.add('has-space');
+    btn.textContent = '│';
+  }
+}
+
+// FILL BLANK
+function renderFillBlank(q) {
+  const sentenceWithBlank = q.sentence.replace('___', '<span id="fill-display" style="color:#bbb">___</span>');
+  const choiceButtons = (q.choices || [q.answer,'오답1','오답2','오답3']).map(c =>
+    `<button class="choice-btn" onclick="selectChoice(this,'${c}','${q.answer}','${q.explanation}')">${c}</button>`
+  ).join('');
+  
+  return `
+    <div class="fill-blank-text">${sentenceWithBlank}</div>
+    <div class="choices-grid" style="margin-top:20px">${choiceButtons}</div>
+  `;
+}
+
+function selectChoice(el, chosen, answer, explanation) {
+  document.querySelectorAll('.choice-btn').forEach(b => b.onclick = null);
+  const display = document.getElementById('fill-display');
+  if (display) display.textContent = chosen;
+  
+  if (chosen === answer) {
+    el.classList.add('correct-ans');
+    if (display) display.style.color = 'var(--grass)';
+    playSound('correct');
+    showFeedback(true, explanation, 15);
+  } else {
+    el.classList.add('wrong-ans');
+    document.querySelectorAll('.choice-btn').forEach(b => { if (b.textContent === answer) b.classList.add('correct-ans'); });
+    if (display) { display.textContent = answer; display.style.color = '#FF6B6B'; }
+    playSound('wrong');
+    hearts = Math.max(0, hearts - 1);
+    updateHUD();
+    setTimeout(() => showFeedback(false, explanation, 0), 700);
+  }
+}
+
+// CHECK ANSWER (for word_order and spacing)
+function checkAnswer() {
+  const q = gameData[currentQ];
+  
+  if (q.type === 'word_order') {
+    if (answerSlots.length === 0) { alert('단어를 선택해주세요!'); return; }
+    const userAnswer = answerSlots.map(s => s.word).join(' ');
+    const correctAnswer = q.answer.join(' ');
+    if (userAnswer === correctAnswer) {
+      playSound('correct');
+      showFeedback(true, q.explanation, 20);
+    } else {
+      hearts = Math.max(0, hearts - 1);
+      updateHUD();
+      playSound('wrong');
+      showFeedback(false, `정답: ${correctAnswer}`, 0);
+    }
+  }
+  
+  if (q.type === 'spacing') {
+    const spaceButtons = document.querySelectorAll('.space-btn');
+    const joined = window._spacingJoined;
+    const answer = window._spacingAnswer;
+    
+    // Build user's answer
+    let userStr = joined[0];
+    spaceButtons.forEach(btn => {
+      const pos = parseInt(btn.dataset.pos);
+      if (btn.classList.contains('has-space')) userStr += ' ';
+      userStr += joined[pos + 1];
+    });
+    
+    if (userStr === answer) {
+      spaceButtons.forEach(btn => {
+        if (btn.classList.contains('has-space')) btn.classList.add('correct');
+      });
+      playSound('correct');
+      showFeedback(true, q.explanation, 20);
+    } else {
+      // Show correct spacing
+      let correctIdx = 0;
+      let correctSpaces = [];
+      for (let i = 0; i < answer.length; i++) {
+        if (answer[i] === ' ') correctSpaces.push(correctIdx - 1);
+        else correctIdx++;
+      }
+      spaceButtons.forEach(btn => {
+        const pos = parseInt(btn.dataset.pos);
+        const shouldHave = correctSpaces.includes(pos);
+        const hasIt = btn.classList.contains('has-space');
+        if (shouldHave !== hasIt) btn.classList.add('incorrect');
+        else if (hasIt) btn.classList.add('correct');
+      });
+      hearts = Math.max(0, hearts - 1);
+      updateHUD();
+      playSound('wrong');
+      setTimeout(() => showFeedback(false, `정답: ${answer}`, 0), 600);
+    }
+  }
+}
+
+function showHint() {
+  const box = document.getElementById('hint-box');
+  if (box) {
+    box.classList.toggle('visible');
+    if (!hintUsed) { hintUsed = true; }
+  }
+}
+
+// ===========================
+// FEEDBACK
+// ===========================
+function showFeedback(correct, explanation, xpGain) {
+  if (correct) { totalCorrect++; score += xpGain + (hintUsed ? 0 : 5); }
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-overlay';
+  
+  const xpActual = correct ? (hintUsed ? Math.floor(xpGain/2) : xpGain) : 0;
+  const starsHTML = correct ? buildStars(hintUsed ? 2 : 3) : buildStars(0);
+  
+  overlay.innerHTML = `
+    <div class="feedback-card">
+      <div class="feedback-emoji">${correct ? (hintUsed?'😊':'🎉') : '😅'}</div>
+      <div class="feedback-title ${correct?'ok':'no'}">${correct ? (hintUsed?'잘했어요!':'완벽해요!') : '괜찮아요!'}</div>
+      <div class="stars-row">${starsHTML}</div>
+      <div class="feedback-desc">${explanation || ''}</div>
+      ${xpActual > 0 ? `<div class="feedback-xp">✨ 경험치 +${xpActual}</div>` : ''}
+      <button class="next-btn" onclick="nextQuestion(${xpActual}, this.closest('.feedback-overlay'))">${currentQ+1 < gameData.length ? '다음 문제 →' : '🏆 결과 보기'}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  if (correct) {
+    confetti();
+    gainXP(xpActual);
+  }
+}
+
+function buildStars(count) {
+  return [0,1,2].map(i =>
+    `<span class="star-icon${i < count ? ' lit' : ''}" style="animation-delay:${i*0.15}s">${i < count ? '⭐' : '☆'}</span>`
+  ).join('');
+}
+
+function nextQuestion(xpGain, overlay) {
+  overlay.remove();
+  stagesCleared = Math.max(stagesCleared, currentQ + 1);
+  currentQ++;
+  updateHUD();
+  buildStageMap();
+  
+  if (currentQ >= gameData.length) {
+    showComplete();
+  } else {
+    renderQuestion();
+  }
+}
+
+function gainXP(amount) {
+  xp += amount;
+  const newLevel = Math.floor(xp / XP_PER_LEVEL) + 1;
+  if (newLevel > charLevel) {
+    charLevel = newLevel;
+    setTimeout(() => {
+      const sprite = document.getElementById('char-sprite');
+      if (sprite) { sprite.style.transform = 'scale(1.5)'; setTimeout(() => sprite.style.transform='', 600); }
+    }, 300);
+  }
+  updateHUD();
+}
+
+// ===========================
+// COMPLETE
+// ===========================
+function showComplete() {
+  const pct = Math.round(totalCorrect / gameData.length * 100);
+  const stars = pct >= 90 ? '⭐⭐⭐' : pct >= 60 ? '⭐⭐' : '⭐';
+  const emoji = pct >= 90 ? '🏆' : pct >= 60 ? '🎖️' : '🎗️';
+  
+  document.getElementById('complete-emoji').textContent = emoji;
+  document.getElementById('complete-stars').textContent = stars;
+  document.getElementById('complete-stats').innerHTML = `
+    <div class="stat-row"><span>📖 총 문제</span><span class="stat-val">${gameData.length}개</span></div>
+    <div class="stat-row"><span>✅ 맞힌 문제</span><span class="stat-val">${totalCorrect}개</span></div>
+    <div class="stat-row"><span>🎯 정확도</span><span class="stat-val">${pct}%</span></div>
+    <div class="stat-row"><span>⭐ 획득 점수</span><span class="stat-val">${score}점</span></div>
+    <div class="stat-row"><span>🧙 캐릭터</span><span class="stat-val">${CHARS[Math.min(charLevel-1,CHARS.length-1)]} Lv.${charLevel}</span></div>
+  `;
+  
+  showScreen('complete-screen');
+  confetti(); confetti(); setTimeout(confetti, 400);
+}
+
+// ===========================
+// HELPERS
+// ===========================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() {
+  gameData = null;
+  showScreen('setup-screen');
+}
+
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    
+    if (type === 'correct') {
+      osc.frequency.setValueAtTime(523, ctx.currentTime);
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(); osc.stop(ctx.currentTime + 0.5);
+    } else {
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      osc.frequency.setValueAtTime(150, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
+    }
+  } catch(e) {}
+}
+
+function confetti() {
+  const colors = ['#FF6B6B','#FFD700','#4ECDC4','#C77DFF','#FF9A3C','#87CEEB'];
+  for (let i = 0; i < 20; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = `
+      left: ${Math.random()*100}%;
+      top: -20px;
+      background: ${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration: ${1.5 + Math.random()*2}s;
+      animation-delay: ${Math.random()*0.5}s;
+      transform: rotate(${Math.random()*360}deg);
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 3500);
+  }
+}
+</script>
+</body>
+</html>
