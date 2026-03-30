@@ -225,9 +225,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .admin-only{display:none!important}
 body.admin .admin-only{display:block!important}
 </style>
-<!-- Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 <div id="app">
@@ -426,60 +423,161 @@ body.admin .admin-only{display:block!important}
 const ISSUE_NUM = 3;
 
 // ── Firebase 설정 ──────────────────────────────────────
-// ★ Firebase 콘솔 → 프로젝트 설정 → 내 앱 → SDK 설정에서 복사해서 붙여넣으세요 ★
+// ★ Firebase 콘솔 → 프로젝트 설정 → 내 앱 → firebaseConfig 복사 ★
 const firebaseConfig = {
-    apiKey: "AIzaSyAGXTluH70xjqOt5SL_vPRD_0-Sno0Ombo",
-    authDomain: "reportergame34.firebaseapp.com",
-    databaseURL: "https://reportergame34-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "reportergame34",
-    storageBucket: "reportergame34.firebasestorage.app",
-    messagingSenderId: "994035949261",
-    appId: "1:994035949261:web:c5099f09e46348eef69384",
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  databaseURL:       "YOUR_DATABASE_URL",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID",
 };
 
 const FB_READY = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
-// Firebase SDK (compat 버전 — 스크립트 태그로 로드됨)
-let _db = null;
-function getDB() { return _db; }
+// ── 내부 상태 ────────────────────────────────────────────
+let _db       = null;            // Firebase DB 인스턴스
+let _fbOnline = false;           // SDK 로드 성공 여부
+const PENDING_KEY = `soyodo_pending_v${ISSUE_NUM}`; // 저장 대기 큐 key
+
+// ── SDK 동적 로드 (재시도 포함) ──────────────────────────
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload  = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function initFirebase(retry = 0) {
+  const MAX_RETRY = 3;
+  const DELAY_MS  = [1000, 2000, 4000];
+  try {
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+    const app = firebase.initializeApp(firebaseConfig);
+    _db = firebase.database(app);
+    _fbOnline = true;
+    // 대기 중인 점수 일괄 전송
+    flushPending();
+    // 랭킹 새로고침
+    renderStartLB();
+  } catch(e) {
+    if (retry < MAX_RETRY) {
+      setTimeout(() => initFirebase(retry + 1), DELAY_MS[retry] || 4000);
+    } else {
+      console.warn('Firebase SDK 로드 실패 — 로컬 모드로 작동');
+    }
+  }
+}
+
+// ── 대기 큐: 오프라인 중 저장 실패한 점수 보관 ───────────
+function enqueuePending(payload) {
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    // 같은 이름이 있으면 더 높은 점수만 유지
+    const idx = q.findIndex(r => r.name === payload.name);
+    if (idx >= 0) {
+      if (payload.score > q[idx].score) q[idx] = payload;
+    } else {
+      q.push(payload);
+    }
+    localStorage.setItem(PENDING_KEY, JSON.stringify(q));
+  } catch(e) {}
+}
+
+async function flushPending() {
+  if (!_fbOnline || !_db) return;
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    if (!q.length) return;
+    for (const p of q) {
+      await fbWriteOne(p.name, p.score, p.correct, p.diff, p.rank);
+    }
+    localStorage.removeItem(PENDING_KEY);
+  } catch(e) {}
+}
+
+// ── Firebase 단건 쓰기 ────────────────────────────────────
+function fbKey(name) {
+  return name.replace(/[.#$[\]\/]/g, '_');
+}
 
 function fbPath() {
   return `leaderboard_v${ISSUE_NUM}`;
 }
 
-function fbKey(name) {
-  return name.replace(/[.#$\[\]/]/g, '_');
+async function fbWriteOne(name, score, correct, diffKey, rank) {
+  if (!_db) return false;
+  try {
+    const key  = fbKey(name);
+    const ref  = _db.ref(fbPath() + '/' + key);
+    const snap = await Promise.race([
+      ref.once('value'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000)),
+    ]);
+    const existing = snap.val();
+    if (existing && existing.score >= score) return true; // 기존이 더 높으면 스킵
+    await ref.set({ name, score, correct, diff: diffKey, rank, at: Date.now() });
+    return true;
+  } catch(e) { return false; }
 }
 
+// ── 저장: 실패하면 큐에 보관 ─────────────────────────────
 async function fbSaveScore(name, score, correct, diffKey, rank) {
-  if (!FB_READY || !_db) return;
-  try {
-    const key = fbKey(name);
-    const ref = _db.ref(fbPath() + '/' + key);
-    const snap = await ref.once('value');
-    const existing = snap.val();
-    // 기존 점수보다 낮으면 저장 안 함
-    if (existing && existing.score >= score) return;
-    await ref.set({ name, score, correct, diff: diffKey, rank, at: Date.now() });
-  } catch(e) { console.warn('Firebase 저장 실패:', e); }
+  if (!FB_READY) return;
+  const payload = { name, score, correct, diff: diffKey, rank };
+  if (!_fbOnline) {
+    enqueuePending(payload);
+    return;
+  }
+  const ok = await fbWriteOne(name, score, correct, diffKey, rank);
+  if (!ok) enqueuePending(payload);
 }
+
+// ── 불러오기: 실패하면 캐시 사용 ─────────────────────────
+const LB_CACHE_KEY = `soyodo_lb_cache_v${ISSUE_NUM}`;
 
 async function fbLoadLB() {
-  if (!FB_READY || !_db) return null;
+  if (!FB_READY) return null;
+  if (!_fbOnline || !_db) {
+    // SDK 아직 로드 중 → 캐시 반환
+    return getCachedLB();
+  }
   try {
-    const snap = await _db.ref(fbPath()).once('value');
+    const snap = await Promise.race([
+      _db.ref(fbPath()).once('value'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000)),
+    ]);
     const data = snap.val();
     if (!data) return [];
-    return Object.values(data)
+    const lb = Object.values(data)
       .filter(r => r && r.name)
       .sort((a, b) => b.score - a.score || b.correct - a.correct)
       .slice(0, 30);
+    // 성공하면 캐시 갱신
+    try { localStorage.setItem(LB_CACHE_KEY, JSON.stringify(lb)); } catch(e) {}
+    return lb;
+  } catch(e) {
+    // 실패 → 캐시 반환
+    return getCachedLB();
+  }
+}
+
+function getCachedLB() {
+  try {
+    const cached = localStorage.getItem(LB_CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
   } catch(e) { return null; }
 }
 
 async function fbClearAll() {
   if (!FB_READY || !_db) return;
-  await _db.ref(fbPath()).remove();
+  try { await _db.ref(fbPath()).remove(); } catch(e) {}
+  try { localStorage.removeItem(LB_CACHE_KEY); } catch(e) {}
 }
 const LB_KEY = `soyodo_lb_v${ISSUE_NUM}`;
 const MAX_LB  = 20;             // 저장할 최대 기록 수
@@ -664,13 +762,7 @@ if (location.search.includes('admin') || location.hash.includes('admin')) {
   document.body.classList.add('admin');
 }
 
-// Firebase SDK 초기화
-if (FB_READY) {
-  try {
-    const app = firebase.initializeApp(firebaseConfig);
-    _db = firebase.database(app);
-  } catch(e) { console.warn('Firebase 초기화 실패:', e); }
-}
+if (FB_READY) initFirebase(); // 백그라운드 로드 시작 (재시도 포함)
 
 init();
 renderStartLB();
