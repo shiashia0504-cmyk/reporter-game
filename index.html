@@ -854,6 +854,37 @@
       <div id="current-book-info" style="font-size:18px; color:#888; padding:8px 0">불러오는 중...</div>
     </div>
 
+    <!-- 통계 카드 -->
+    <div class="setup-card" style="margin-bottom:16px">
+      <div class="setup-label">📊 취재 통계</div>
+      <div id="stats-loading" style="font-size:16px; color:#aaa; padding:8px 0">불러오는 중...</div>
+      <div id="stats-content" style="display:none">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+          <div style="background:var(--paper); border:2px solid var(--ink); border-radius:4px; padding:14px; text-align:center; box-shadow:3px 3px 0 var(--ink)">
+            <div style="font-size:28px; font-weight:900; color:var(--accent); font-family:'Nanum Myeongjo',serif" id="stat-plays">0</div>
+            <div style="font-size:13px; color:#888; margin-top:2px">총 취재 횟수</div>
+          </div>
+          <div style="background:var(--paper); border:2px solid var(--ink); border-radius:4px; padding:14px; text-align:center; box-shadow:3px 3px 0 var(--ink)">
+            <div style="font-size:28px; font-weight:900; color:var(--accent); font-family:'Nanum Myeongjo',serif" id="stat-avg">0%</div>
+            <div style="font-size:13px; color:#888; margin-top:2px">평균 정확도</div>
+          </div>
+          <div style="background:var(--paper); border:2px solid var(--ink); border-radius:4px; padding:14px; text-align:center; box-shadow:3px 3px 0 var(--ink)">
+            <div style="font-size:28px; font-weight:900; color:var(--accent); font-family:'Nanum Myeongjo',serif" id="stat-perfect">0</div>
+            <div style="font-size:13px; color:#888; margin-top:2px">만점 횟수 🏆</div>
+          </div>
+          <div style="background:var(--paper); border:2px solid var(--ink); border-radius:4px; padding:14px; text-align:center; box-shadow:3px 3px 0 var(--ink)">
+            <div style="font-size:28px; font-weight:900; color:var(--accent); font-family:'Nanum Myeongjo',serif" id="stat-today">0</div>
+            <div style="font-size:13px; color:#888; margin-top:2px">오늘 접속</div>
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:14px; font-weight:700; color:var(--ink); margin-bottom:6px; font-family:'Nanum Myeongjo',serif">최근 기록 (최대 10개)</div>
+          <div id="stat-recent" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto"></div>
+        </div>
+        <button onclick="clearStats()" style="width:100%; padding:10px; background:white; border:2px solid #ddd; border-radius:4px; font-family:'Nanum Gothic',sans-serif; font-size:15px; cursor:pointer; color:#aaa; margin-top:4px">🗑️ 통계 초기화</button>
+      </div>
+    </div>
+
     <div class="setup-card" style="margin-bottom:16px">
       <div class="setup-label">📖 책 제목</div>
       <input type="text" id="book-name-input" placeholder="예) 3학년 1반 특종"
@@ -994,6 +1025,16 @@ async function initFirebase() {
     window._fbSet    = (data) => set(bookRef, data);
     window._fbRemove = ()     => remove(bookRef);
     window._fbListen = (cb)   => onValue(bookRef, snap => cb(snap.val()));
+
+    // 통계용
+    const statsRef = ref(db, 'stats');
+    window._fbStatsListen = (cb) => onValue(statsRef, snap => cb(snap.val()));
+    window._fbStatsPush = async (record) => {
+      const { push, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+      record.ts = Date.now();
+      await push(statsRef, record);
+    };
+    window._fbStatsRemove = () => remove(statsRef);
     return true;
   } catch(e) {
     console.error('Firebase 초기화 실패:', e);
@@ -1034,7 +1075,7 @@ async function showTeacherPanel() {
   const ok = await initFirebase();
   if (!ok) { showFirebaseSetupGuide(); return; }
 
-  // Firebase에서 현재 문제 불러오기 (1회)
+  // Firebase에서 현재 문제 불러오기
   window._fbListen(data => {
     updateCurrentBookStatus(data);
     if (data && data.questions && editingQuestions.length === 0) {
@@ -1043,6 +1084,66 @@ async function showTeacherPanel() {
       renderQuestionList();
     }
   });
+
+  // 통계 불러오기
+  loadStats();
+}
+
+function loadStats() {
+  if (!window._fbStatsListen) return;
+  window._fbStatsListen(data => {
+    const loading = document.getElementById('stats-loading');
+    const statsContent = document.getElementById('stats-content');
+    if (!loading || !statsContent) return;
+
+    if (!data) {
+      loading.textContent = '아직 취재 기록이 없어요.';
+      loading.style.display = 'block';
+      statsContent.style.display = 'none';
+      return;
+    }
+
+    const records = Object.values(data);
+    loading.style.display = 'none';
+    statsContent.style.display = 'block';
+
+    // 집계
+    const total = records.length;
+    const avgPct = Math.round(records.reduce((s, r) => s + (r.pct || 0), 0) / total);
+    const perfect = records.filter(r => r.pct === 100).length;
+
+    // 오늘 접속
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayCount = records.filter(r => r.ts && r.ts >= todayStart.getTime()).length;
+
+    document.getElementById('stat-plays').textContent = total;
+    document.getElementById('stat-avg').textContent = avgPct + '%';
+    document.getElementById('stat-perfect').textContent = perfect;
+    document.getElementById('stat-today').textContent = todayCount;
+
+    // 최근 10개
+    const recent = records
+      .filter(r => r.ts)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 10);
+
+    const recentEl = document.getElementById('stat-recent');
+    recentEl.innerHTML = recent.map(r => {
+      const d = new Date(r.ts);
+      const time = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const star = r.pct >= 90 ? '🏆' : r.pct >= 60 ? '📰' : '📋';
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; background:white; border:1px solid #eee; border-radius:4px; font-size:14px">
+        <span style="color:#888">${time}</span>
+        <span style="font-weight:700">${r.correct}/${r.total}문제 (${r.pct}%)</span>
+        <span>${star}</span>
+      </div>`;
+    }).join('');
+  });
+}
+
+async function clearStats() {
+  if (!confirm('통계를 모두 삭제할까요?')) return;
+  if (window._fbStatsRemove) await window._fbStatsRemove();
 }
 
 function updateCurrentBookStatus(data) {
@@ -1742,6 +1843,18 @@ function showComplete() {
   if (wiz) wiz.style.display = 'none';
 
   confetti(); confetti(); setTimeout(confetti, 400);
+
+  // Firebase에 기록 저장
+  if (window._fbStatsPush) {
+    window._fbStatsPush({
+      pct,
+      correct: totalCorrect,
+      total: gameData.length,
+      score,
+      charLevel,
+      title: window._currentBookData?.title || '제목 없음'
+    }).catch(() => {});
+  }
 }
 
 function playAgain() {
